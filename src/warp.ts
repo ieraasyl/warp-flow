@@ -1,5 +1,6 @@
 import { execSync } from "child_process";
 import * as fs from "fs";
+import * as https from "https";
 
 export const DEFAULT_CLI =
   "C:\\Program Files\\Cloudflare\\Cloudflare WARP\\warp-cli.exe";
@@ -155,19 +156,63 @@ export function extractColoCode(raw: string): string | null {
 }
 
 const CDN_CGI_TRACE = "https://www.cloudflare.com/cdn-cgi/trace";
-const TRACE_FETCH_MS = 4500;
+const TRACE_FETCH_MS = 6000;
+const TRACE_HEADERS = {
+  Accept: "text/plain,*/*",
+  "User-Agent": "Flow.Launcher.Plugin.WARP",
+};
 
-/** Fetch Cloudflare trace (exit colo + country code when traffic uses WARP). */
-export async function fetchCdnCgiTrace(): Promise<string | null> {
+/** Node `https` (works in Flow Launcher’s older embedded runtimes without `fetch`). */
+function fetchCdnCgiTraceViaHttps(): Promise<string | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (v: string | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(v);
+    };
+
+    const url = new URL(CDN_CGI_TRACE);
+    const req = https.request(
+      {
+        hostname: url.hostname,
+        port: 443,
+        path: `${url.pathname}${url.search}`,
+        method: "GET",
+        headers: TRACE_HEADERS,
+        servername: url.hostname,
+      },
+      (res) => {
+        let data = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk: string) => {
+          data += chunk;
+        });
+        res.on("end", () => {
+          const code = res.statusCode ?? 0;
+          const text = data.trim();
+          if (code >= 200 && code < 300 && text.length > 0) done(text);
+          else done(null);
+        });
+      }
+    );
+    req.setTimeout(TRACE_FETCH_MS, () => {
+      req.destroy();
+      done(null);
+    });
+    req.on("error", () => done(null));
+    req.end();
+  });
+}
+
+async function fetchCdnCgiTraceViaFetch(): Promise<string | null> {
+  if (typeof fetch !== "function") return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TRACE_FETCH_MS);
   try {
     const res = await fetch(CDN_CGI_TRACE, {
       signal: controller.signal,
-      headers: {
-        Accept: "text/plain,*/*",
-        "User-Agent": "Flow.Launcher.Plugin.WARP",
-      },
+      headers: TRACE_HEADERS,
     });
     if (!res.ok) return null;
     const text = (await res.text()).trim();
@@ -177,6 +222,35 @@ export async function fetchCdnCgiTrace(): Promise<string | null> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Windows: `curl` uses system proxy; helps when Node HTTPS misses corporate proxy. */
+function fetchCdnCgiTraceViaCurl(): string | null {
+  if (process.platform !== "win32") return null;
+  try {
+    const out = execSync(
+      `curl -sS --max-time 5 "${CDN_CGI_TRACE}"`,
+      {
+        encoding: "utf-8",
+        timeout: 6500,
+        windowsHide: true,
+        maxBuffer: 65536,
+      }
+    );
+    const text = out.trim();
+    return text.length > 0 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch Cloudflare trace (colo + loc when egress goes through Cloudflare). */
+export async function fetchCdnCgiTrace(): Promise<string | null> {
+  const a = await fetchCdnCgiTraceViaHttps();
+  if (a) return a;
+  const b = await fetchCdnCgiTraceViaFetch();
+  if (b) return b;
+  return fetchCdnCgiTraceViaCurl();
 }
 
 export function parseCdnCgiTraceFields(text: string): {

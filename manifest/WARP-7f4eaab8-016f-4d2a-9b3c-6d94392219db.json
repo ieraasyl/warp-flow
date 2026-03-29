@@ -3,10 +3,10 @@
   "Name": "WARP",
   "Description": "WARP connect / disconnect / colo",
   "Author": "ieraasyl",
-  "Version": "1.0.3",
+  "Version": "1.0.4",
   "Language": "javascript",
   "Website": "https://github.com/ieraasyl/warp-flow",
-  "UrlDownload": "https://github.com/ieraasyl/warp-flow/releases/download/v1.0.3/Flow.Launcher.Plugin.WARP.zip",
+  "UrlDownload": "https://github.com/ieraasyl/warp-flow/releases/download/v1.0.4/Flow.Launcher.Plugin.WARP.zip",
   "UrlSourceCode": "https://github.com/ieraasyl/warp-flow/tree/main",
   "IcoPath": "https://cdn.jsdelivr.net/gh/ieraasyl/warp-flow@main/Images/app.png"
 }

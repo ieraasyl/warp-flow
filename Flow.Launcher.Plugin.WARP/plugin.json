@@ -4,7 +4,7 @@
   "Name": "WARP",
   "Description": "WARP connect / disconnect / colo",
   "Author": "ieraasyl",
-  "Version": "1.0.3",
+  "Version": "1.0.4",
   "Language": "javascript",
   "Website": "https://github.com/ieraasyl/warp-flow",
   "ExecuteFileName": "main.js",
