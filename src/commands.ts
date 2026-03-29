@@ -58,7 +58,7 @@ export function resolveCommands(query: string, cliPath: string): FlowResult[] {
   const icon = connected ? IMG_ON : IMG_OFF;
 
   const coloSub = connected
-    ? extractColoSummary(tunnelStats(cliPath))
+    ? `Colocation: ${extractColoSummary(tunnelStats(cliPath))}`
     : "Not connected — connect WARP to see colocation";
 
   const buildColo = (): FlowResult => ({

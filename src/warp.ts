@@ -99,6 +99,7 @@ export function extractColoSummary(raw: string): string {
   if (!cleaned) return "No tunnel stats from WARP CLI";
 
   const patterns: RegExp[] = [
+    /colocation\s+center\s*:\s*([A-Za-z0-9-]+)/i,
     /"colo"\s*:\s*"([^"]+)"/i,
     /colo(?:cation)?\s*[:#]\s*([A-Za-z0-9][A-Za-z0-9().\s-]{0,48})/i,
     /\bcolo(?:cation)?\s+([A-Z]{3})\b/i,
