@@ -1,0 +1,28 @@
+{
+  "name": "warp-flow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Flow Launcher plugin: Cloudflare WARP connect, disconnect, colocation",
+  "license": "MIT",
+  "author": "ieraasyl",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ieraasyl/warp-flow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ieraasyl/warp-flow/issues"
+  },
+  "homepage": "https://github.com/ieraasyl/warp-flow#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "main.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.0"
+  }
+}

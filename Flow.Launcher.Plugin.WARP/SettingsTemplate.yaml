@@ -1,0 +1,6 @@
+- Name: WarpCliPath
+  Type: inputWithFileBtn
+  DefaultValue: "C:\\Program Files\\Cloudflare\\Cloudflare WARP\\warp-cli.exe"
+  Label: "Path to warp-cli.exe"
+  Attributes:
+    Filter: "warp-cli.exe|warp-cli.exe"

@@ -1,0 +1,12 @@
+{
+  "ID": "7f4eaab8-016f-4d2a-9b3c-6d94392219db",
+  "ActionKeyword": "warp",
+  "Name": "WARP",
+  "Description": "WARP connect / disconnect / colo",
+  "Author": "ieraasyl",
+  "Version": "1.0.0",
+  "Language": "javascript",
+  "Website": "https://github.com/ieraasyl/warp-flow",
+  "ExecuteFileName": "main.js",
+  "IcoPath": "Images\\app.png"
+}
