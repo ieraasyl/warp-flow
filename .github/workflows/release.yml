@@ -26,7 +26,7 @@ jobs:
         run: |
           PKG="Flow.Launcher.Plugin.WARP"
           mkdir -p "${PKG}/Images"
-          cp main.js commands.js warp.js plugin.json SettingsTemplate.yaml "${PKG}/"
+          cp main.js commands.js warp.js Flow.Launcher.Plugin.WARP/plugin.json Flow.Launcher.Plugin.WARP/SettingsTemplate.yaml "${PKG}/"
           cp Images/*.png "${PKG}/Images/"
           zip -r "${PKG}.zip" "${PKG}"
 
