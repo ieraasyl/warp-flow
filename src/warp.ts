@@ -93,10 +93,44 @@ export function tunnelStats(cliPath: string): string {
   return primary;
 }
 
-/** Best-effort colocation / edge label from `stats` / `warp-stats` output. */
-export function extractColoSummary(raw: string): string {
+/** True when `warp-cli stats` returned internal histogram/metrics (no human colo line). */
+export function isWarpCliMetricsDump(raw: string): boolean {
+  const t = raw.replace(/\s+/g, " ").trim().toLowerCase();
+  if (!t) return false;
+  if (t.startsWith("{") && t.includes('"alternate_network"')) return true;
+  if (t.includes("alternate_network:") && t.includes("updates_recv")) return true;
+  if (t.includes("message_bus (type=")) return true;
+  return false;
+}
+
+function isPlausibleColoLabel(v: string): boolean {
+  const s = v.trim();
+  if (s.length < 2 || s.length > 80) return false;
+  if (/updates_recv|api_actor|request=|message_bus|\(count/i.test(s)) return false;
+  return true;
+}
+
+/** IPv4 tunnel endpoint from `warp-cli -j tunnel stats` (consumer builds omit POP in `stats`). */
+export function getTunnelV4Endpoint(cliPath: string): string | null {
+  if (!cliExists(cliPath)) return null;
+  try {
+    const out = execSync(`"${cliPath}" -j tunnel stats`, {
+      encoding: "utf-8",
+      timeout: 5000,
+      windowsHide: true,
+    }).trim();
+    const j = JSON.parse(out) as { v4_endpoint?: unknown };
+    const ep = j.v4_endpoint;
+    return typeof ep === "string" && ep.length > 0 ? ep : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Best-effort colocation / POP label from `stats` / `warp-stats` text or JSON-ish blob. */
+export function extractColoCode(raw: string): string | null {
   const cleaned = raw.replace(/\s+/g, " ").trim();
-  if (!cleaned) return "No tunnel stats from WARP CLI";
+  if (!cleaned) return null;
 
   const patterns: RegExp[] = [
     /colocation\s+center\s*:\s*([A-Za-z0-9-]+)/i,
@@ -111,9 +145,31 @@ export function extractColoSummary(raw: string): string {
     const m = cleaned.match(re);
     if (m?.[1]) {
       const v = m[1].trim();
-      if (v) return v.length > 80 ? `${v.slice(0, 77)}...` : v;
+      if (v && isPlausibleColoLabel(v)) {
+        return v.length > 80 ? `${v.slice(0, 77)}...` : v;
+      }
     }
   }
 
-  return formatStatusHint(cleaned).slice(0, 200);
+  return null;
+}
+
+/**
+ * Subtitle line for Flow Launcher colocation result: real POP when CLI exposes it,
+ * otherwise a short hint plus tunnel IP (current Windows `stats` is metrics-only).
+ */
+export function colocationSubtitle(cliPath: string): string {
+  const raw = tunnelStats(cliPath);
+  const code = extractColoCode(raw);
+  if (code) return `Colocation: ${code}`;
+
+  if (isWarpCliMetricsDump(raw)) {
+    const ep = getTunnelV4Endpoint(cliPath);
+    return ep
+      ? `Colocation: POP code in WARP app only · tunnel ${ep}`
+      : "Colocation: POP code in WARP app only (not in warp-cli stats)";
+  }
+
+  const hint = formatStatusHint(raw).slice(0, 200);
+  return hint ? `Colocation: ${hint}` : "Colocation: (no stats)";
 }

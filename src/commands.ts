@@ -1,10 +1,4 @@
-import {
-  cliExists,
-  extractColoSummary,
-  getStatus,
-  isConnected,
-  tunnelStats,
-} from "./warp";
+import { cliExists, colocationSubtitle, getStatus, isConnected } from "./warp";
 
 export interface FlowResult {
   Title: string;
@@ -58,7 +52,7 @@ export function resolveCommands(query: string, cliPath: string): FlowResult[] {
   const icon = connected ? IMG_ON : IMG_OFF;
 
   const coloSub = connected
-    ? `Colocation: ${extractColoSummary(tunnelStats(cliPath))}`
+    ? colocationSubtitle(cliPath)
     : "Not connected — connect WARP to see colocation";
 
   const buildColo = (): FlowResult => ({
