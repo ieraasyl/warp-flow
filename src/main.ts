@@ -34,17 +34,23 @@ function executeAction(method: string, cliPath: string): void {
   }
 }
 
-const request = readRequest();
-const cliPath = getCliPath(request.settings);
-const method = String(request.method ?? "").toLowerCase();
+async function main(): Promise<void> {
+  const request = readRequest();
+  const cliPath = getCliPath(request.settings);
+  const method = String(request.method ?? "").toLowerCase();
 
-let results: FlowResult[] = [];
+  let results: FlowResult[] = [];
 
-if (method === "query") {
-  const query = String(request.parameters[0] ?? "").trim();
-  results = resolveCommands(query, cliPath);
-} else {
-  executeAction(method, cliPath);
+  if (method === "query") {
+    const query = String(request.parameters[0] ?? "").trim();
+    results = await resolveCommands(query, cliPath);
+  } else {
+    executeAction(method, cliPath);
+  }
+
+  console.log(JSON.stringify({ result: results }));
 }
 
-console.log(JSON.stringify({ result: results }));
+main().catch(() => {
+  console.log(JSON.stringify({ result: [] }));
+});

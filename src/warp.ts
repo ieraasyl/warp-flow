@@ -154,11 +154,63 @@ export function extractColoCode(raw: string): string | null {
   return null;
 }
 
-/**
- * Subtitle line for Flow Launcher colocation result: real POP when CLI exposes it,
- * otherwise a short hint plus tunnel IP (current Windows `stats` is metrics-only).
- */
-export function colocationSubtitle(cliPath: string): string {
+const CDN_CGI_TRACE = "https://www.cloudflare.com/cdn-cgi/trace";
+const TRACE_FETCH_MS = 4500;
+
+/** Fetch Cloudflare trace (exit colo + country code when traffic uses WARP). */
+export async function fetchCdnCgiTrace(): Promise<string | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TRACE_FETCH_MS);
+  try {
+    const res = await fetch(CDN_CGI_TRACE, {
+      signal: controller.signal,
+      headers: {
+        Accept: "text/plain,*/*",
+        "User-Agent": "Flow.Launcher.Plugin.WARP",
+      },
+    });
+    if (!res.ok) return null;
+    const text = (await res.text()).trim();
+    return text.length > 0 ? text : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function parseCdnCgiTraceFields(text: string): {
+  colo: string;
+  loc?: string;
+} | null {
+  let colo: string | undefined;
+  let loc: string | undefined;
+  for (const line of text.split(/\n/)) {
+    const eq = line.indexOf("=");
+    if (eq <= 0) continue;
+    const k = line.slice(0, eq).trim();
+    const v = line.slice(eq + 1).trim();
+    if (k === "colo") colo = v;
+    else if (k === "loc") loc = v;
+  }
+  if (!colo || !/^[A-Za-z0-9-]{2,20}$/.test(colo)) return null;
+  return { colo, loc: loc && /^[A-Za-z]{2}$/.test(loc) ? loc.toUpperCase() : undefined };
+}
+
+/** ISO 3166-1 alpha-2 → English country name for subtitles. */
+export function countryNameFromLocCode(iso2: string): string {
+  const code = iso2.toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return iso2;
+  try {
+    const dn = new Intl.DisplayNames(["en"], { type: "region" });
+    const name = dn.of(code);
+    return name && name !== code ? name : code;
+  } catch {
+    return code;
+  }
+}
+
+function colocationSubtitleFallback(cliPath: string): string {
   const raw = tunnelStats(cliPath);
   const code = extractColoCode(raw);
   if (code) return `Colocation: ${code}`;
@@ -166,10 +218,28 @@ export function colocationSubtitle(cliPath: string): string {
   if (isWarpCliMetricsDump(raw)) {
     const ep = getTunnelV4Endpoint(cliPath);
     return ep
-      ? `Colocation: POP code in WARP app only · tunnel ${ep}`
-      : "Colocation: POP code in WARP app only (not in warp-cli stats)";
+      ? `Colocation: trace unavailable · tunnel ${ep}`
+      : "Colocation: trace unavailable (not in warp-cli stats)";
   }
 
   const hint = formatStatusHint(raw).slice(0, 200);
   return hint ? `Colocation: ${hint}` : "Colocation: (no stats)";
+}
+
+/**
+ * Subtitle for colocation row: POP + country from `cdn-cgi/trace` when WARP egress
+ * hits Cloudflare; otherwise CLI stats / tunnel IP fallbacks.
+ */
+export async function colocationSubtitle(cliPath: string): Promise<string> {
+  const traceText = await fetchCdnCgiTrace();
+  if (traceText) {
+    const fields = parseCdnCgiTraceFields(traceText);
+    if (fields) {
+      if (fields.loc) {
+        return `Colocation: ${fields.colo}/${countryNameFromLocCode(fields.loc)}`;
+      }
+      return `Colocation: ${fields.colo}`;
+    }
+  }
+  return colocationSubtitleFallback(cliPath);
 }

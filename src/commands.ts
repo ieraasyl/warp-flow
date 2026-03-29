@@ -43,7 +43,10 @@ function matchesColoQuery(q: string): boolean {
   );
 }
 
-export function resolveCommands(query: string, cliPath: string): FlowResult[] {
+export async function resolveCommands(
+  query: string,
+  cliPath: string
+): Promise<FlowResult[]> {
   if (!cliExists(cliPath)) return notInstalledResult();
 
   const q = query.trim().toLowerCase();
@@ -52,7 +55,7 @@ export function resolveCommands(query: string, cliPath: string): FlowResult[] {
   const icon = connected ? IMG_ON : IMG_OFF;
 
   const coloSub = connected
-    ? colocationSubtitle(cliPath)
+    ? await colocationSubtitle(cliPath)
     : "Not connected — connect WARP to see colocation";
 
   const buildColo = (): FlowResult => ({
