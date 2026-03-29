@@ -25,10 +25,13 @@ jobs:
       - name: Package plugin zip
         run: |
           PKG="Flow.Launcher.Plugin.WARP"
-          mkdir -p "${PKG}/Images"
-          cp main.js commands.js warp.js Flow.Launcher.Plugin.WARP/plugin.json Flow.Launcher.Plugin.WARP/SettingsTemplate.yaml "${PKG}/"
-          cp Images/*.png "${PKG}/Images/"
-          zip -r "${PKG}.zip" "${PKG}"
+          STAGING="staging/${PKG}"
+          mkdir -p "${STAGING}/Images"
+          cp main.js commands.js warp.js "${STAGING}/"
+          cp Flow.Launcher.Plugin.WARP/plugin.json Flow.Launcher.Plugin.WARP/SettingsTemplate.yaml "${STAGING}/"
+          cp Images/*.png "${STAGING}/Images/"
+          cd staging
+          zip -r "../${PKG}.zip" "${PKG}"
 
       - uses: softprops/action-gh-release@v2
         with:
